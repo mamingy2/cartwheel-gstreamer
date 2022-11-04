@@ -1,0 +1,94 @@
+From f8ba35afb0216bb4b5985f6a6f8f0b4df940b723 Mon Sep 17 00:00:00 2001
+From: "Ma, Mingyang" <mingyang.ma@intel.com>
+Date: Fri, 4 Nov 2022 12:34:42 +0800
+Subject: [PATCH] msdkenc: Let parameters be decided by runtime
+
+Set encoding parameters by default instead of certain values.
+---
+ .../gst-plugins-bad/sys/msdk/gstmsdkenc.c     | 20 +++++++++----------
+ .../gst-plugins-bad/sys/msdk/gstmsdkenc.h     |  2 +-
+ 2 files changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/subprojects/gst-plugins-bad/sys/msdk/gstmsdkenc.c b/subprojects/gst-plugins-bad/sys/msdk/gstmsdkenc.c
+index 1e265b3659..67fcad25c6 100644
+--- a/subprojects/gst-plugins-bad/sys/msdk/gstmsdkenc.c
++++ b/subprojects/gst-plugins-bad/sys/msdk/gstmsdkenc.c
+@@ -98,15 +98,15 @@ static GstStaticPadTemplate sink_factory = GST_STATIC_PAD_TEMPLATE ("sink",
+ #define PROP_HARDWARE_DEFAULT            TRUE
+ #define PROP_ASYNC_DEPTH_DEFAULT         4
+ #define PROP_TARGET_USAGE_DEFAULT        (MFX_TARGETUSAGE_BALANCED)
+-#define PROP_RATE_CONTROL_DEFAULT        (MFX_RATECONTROL_CBR)
++#define PROP_RATE_CONTROL_DEFAULT        (MFX_RATECONTROL_VBR)
+ #define PROP_BITRATE_DEFAULT             (2 * 1024)
+ #define PROP_QPI_DEFAULT                 0
+ #define PROP_QPP_DEFAULT                 0
+ #define PROP_QPB_DEFAULT                 0
+-#define PROP_GOP_SIZE_DEFAULT            256
++#define PROP_GOP_SIZE_DEFAULT            0
+ #define PROP_REF_FRAMES_DEFAULT          0
+ #define PROP_I_FRAMES_DEFAULT            0
+-#define PROP_B_FRAMES_DEFAULT            0
++#define PROP_B_FRAMES_DEFAULT            -1
+ #define PROP_NUM_SLICES_DEFAULT          0
+ #define PROP_AVBR_ACCURACY_DEFAULT       0
+ #define PROP_AVBR_CONVERGENCE_DEFAULT    0
+@@ -115,10 +115,10 @@ static GstStaticPadTemplate sink_factory = GST_STATIC_PAD_TEMPLATE ("sink",
+ #define PROP_MAX_FRAME_SIZE_DEFAULT      0
+ #define PROP_MAX_FRAME_SIZE_I_DEFAULT    0
+ #define PROP_MAX_FRAME_SIZE_P_DEFAULT    0
+-#define PROP_MBBRC_DEFAULT               MFX_CODINGOPTION_OFF
++#define PROP_MBBRC_DEFAULT               MFX_CODINGOPTION_UNKNOWN
+ #define PROP_LOWDELAY_BRC_DEFAULT        MFX_CODINGOPTION_OFF
+-#define PROP_ADAPTIVE_I_DEFAULT          MFX_CODINGOPTION_OFF
+-#define PROP_ADAPTIVE_B_DEFAULT          MFX_CODINGOPTION_OFF
++#define PROP_ADAPTIVE_I_DEFAULT          MFX_CODINGOPTION_UNKNOWN
++#define PROP_ADAPTIVE_B_DEFAULT          MFX_CODINGOPTION_UNKNOWN
+ 
+ /* External coding properties */
+ #define EC_PROPS_STRUCT_NAME             "props"
+@@ -2208,7 +2208,7 @@ gst_msdkenc_set_common_property (GObject * object, guint prop_id,
+       thiz->i_frames = g_value_get_uint (value);
+       break;
+     case GST_MSDKENC_PROP_B_FRAMES:
+-      thiz->b_frames = g_value_get_uint (value);
++      thiz->b_frames = g_value_get_int (value);
+       break;
+     case GST_MSDKENC_PROP_NUM_SLICES:
+       thiz->num_slices = g_value_get_uint (value);
+@@ -2320,7 +2320,7 @@ gst_msdkenc_get_common_property (GObject * object, guint prop_id,
+       g_value_set_uint (value, thiz->i_frames);
+       break;
+     case GST_MSDKENC_PROP_B_FRAMES:
+-      g_value_set_uint (value, thiz->b_frames);
++      g_value_set_int (value, thiz->b_frames);
+       break;
+     case GST_MSDKENC_PROP_NUM_SLICES:
+       g_value_set_uint (value, thiz->num_slices);
+@@ -2469,9 +2469,9 @@ gst_msdkenc_install_common_properties (GstMsdkEncClass * klass)
+       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+ 
+   obj_properties[GST_MSDKENC_PROP_B_FRAMES] =
+-      g_param_spec_uint ("b-frames", "B Frames",
++      g_param_spec_int ("b-frames", "B Frames",
+       "Number of B frames between I and P frames",
+-      0, G_MAXINT, PROP_B_FRAMES_DEFAULT,
++      -1, G_MAXINT, PROP_B_FRAMES_DEFAULT,
+       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+ 
+   obj_properties[GST_MSDKENC_PROP_NUM_SLICES] =
+diff --git a/subprojects/gst-plugins-bad/sys/msdk/gstmsdkenc.h b/subprojects/gst-plugins-bad/sys/msdk/gstmsdkenc.h
+index cd266a2b49..9ddec80c2f 100644
+--- a/subprojects/gst-plugins-bad/sys/msdk/gstmsdkenc.h
++++ b/subprojects/gst-plugins-bad/sys/msdk/gstmsdkenc.h
+@@ -157,7 +157,7 @@ struct _GstMsdkEnc
+   guint gop_size;
+   guint ref_frames;
+   guint i_frames;
+-  guint b_frames;
++  gint b_frames;
+   guint num_slices;
+   gint16 mbbrc;
+   gint16 adaptive_i;
+-- 
+2.25.1
+
